@@ -1,0 +1,13 @@
+{
+  "name": "googleplay-scraper",
+  "version": "0.0.1",
+  "description": "Scrape do googleplay",
+  "main": "server.js",
+  "author": "Marcelo",
+  "dependencies": {
+    "express": "latest",
+    "request": "latest",
+    "cheerio": "latest",
+    "sharp": "latest"
+  }
+}
