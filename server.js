@@ -15,27 +15,31 @@ app.get('/app', function (req, res) {
 
     url = 'https://play.google.com/store/apps/details?id=' + id + '&hl=pt-BR';
 
-    try {
-        request(url, function (error, response, html) {
 
-            if (!error) {
+    request(url, function (error, response, html) {
+
+        if (!error) {
+            try {
                 var $ = cheerio.load(html);
                 var title = $(".document-title").text();
+                if (title == '') {
+                    throw 404;
+                }
 
-                var rating = $(".score").text();
+                var rating = ($(".score").text()).replace(",", ".");
                 var descricao = $(".show-more-content").text();
                 var imgs = [];
 
-                fs.writeFile('output.html', html, function (err) {
-                });
+                /*fs.writeFile('output.html', html, function (err) {
+                 });*/
 
                 var urlIcone = $("img.cover-image").attr('src');
                 var package = $('.details-wrapper').data('docid')
-                var iconeLocal = package.replace(/\./gi, "_");
+                var prefixoImgs = package.replace(/\./gi, "_");
 
-                download(urlIcone, iconeLocal + '.webp', function () {
-                    sharp(iconeLocal + '.webp')
-                        .toFile(iconeLocal + '.png', function (err) {
+                download(urlIcone, prefixoImgs + '.webp', function () {
+                    sharp(prefixoImgs + '.webp')
+                        .toFile(prefixoImgs + "_icon" + '.png', function (err) {
                             //console.error(err);
                         });
                 });
@@ -46,24 +50,33 @@ app.get('/app', function (req, res) {
 
                     download(url, '' + i + '.webp', function () {
                         sharp('' + i + '.webp')
-                            .toFile('' + i + '.png', function (err) {
+                            .toFile(prefixoImgs + '_dsc_' + i + '.png', function (err) {
                                 //console.error(err);
                             });
                     });
-                    imgs.push('' + i + '.png');
+                    imgs.push(prefixoImgs + '_dsc_' + i + '.png');
                 });
 
-                var json = {title: title, rating: rating, package: package, imgsDescricao: imgs};
+                var json = {
+                    url: this.href,
+                    title: title,
+                    rating: rating,
+                    package: package,
+                    img: prefixoImgs + '.png',
+                    description: descricao,
+                    imgsDescription: imgs
+                };
                 res.send(json);
+            } catch (exc) {
+                var statusCode = 505;
+                if (!isNaN(exc)) {
+                    statusCode = exc;
+                }
+                res.status(statusCode).send("Error: " + exc);
+                return;
             }
-
-            fs.writeFile('output.json', JSON.stringify(json, null, 4), function (err) {
-            });
-        });
-    } catch (exc) {
-        res.status(505).send("Error: " + exc);
-        return;
-    }
+        }
+    });
 });
 
 
