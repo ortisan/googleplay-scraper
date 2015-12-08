@@ -4,75 +4,76 @@ var request = require('request');
 var cheerio = require('cheerio');
 var sharp = require('sharp');
 var app = express();
+var exec = require('child_process').exec,
+    child;
+var props = require('./props');
 
 app.get('/app', function (req, res) {
     var id = req.query.id;
 
     if (!id) {
-        res.status(404).send("Not found");
+        res.status(404).send('Not found');
         return;
     }
 
     url = 'https://play.google.com/store/apps/details?id=' + id + '&hl=pt-BR';
-
 
     request(url, function (error, response, html) {
 
         if (!error) {
             try {
                 var $ = cheerio.load(html);
-                var title = $(".document-title").text();
+                var title = $('.document-title').text();
                 if (title == '') {
                     throw 404;
                 }
 
-                var rating = ($(".score").text()).replace(",", ".");
-                var descricao = $(".show-more-content").text();
+                var rating = ($('.score').text()).replace(',', '.');
+                var downloads = ($('[itemprop=numDownloads]').text().split(' - ')[0]).replace(/\./g, '');
+                var descricao = $('.show-more-content').text();
                 var imgs = [];
 
-                /*fs.writeFile('output.html', html, function (err) {
-                 });*/
-
-                var urlIcone = $("img.cover-image").attr('src');
+                var urlIcone = $('img.cover-image').attr('src');
                 var package = $('.details-wrapper').data('docid')
-                var prefixoImgs = package.replace(/\./gi, "_");
+                var prefixoImgs = package.replace(/\./gi, '_');
 
-                download(urlIcone, prefixoImgs + '.webp', function () {
-                    sharp(prefixoImgs + '.webp')
-                        .toFile(prefixoImgs + "_icon" + '.png', function (err) {
+                download(urlIcone, props.getDirTemporaryImgs() + prefixoImgs + '.webp', function () {
+                    sharp(props.getDirTemporaryImgs() + prefixoImgs + '.webp')
+                        .toFile(props.getDirDownloadImgs() + prefixoImgs + '_icon' + '.png', function (err) {
                             //console.error(err);
                         });
                 });
 
-                $(".thumbnails img.screenshot").each(function (i, element) {
+                $('.thumbnails img.screenshot').each(function (i, element) {
                     var url = $(element).attr('src');
                     url = url.replace('https:', 'http:');
 
-                    download(url, '' + i + '.webp', function () {
-                        sharp('' + i + '.webp')
-                            .toFile(prefixoImgs + '_dsc_' + i + '.png', function (err) {
-                                //console.error(err);
-                            });
+                    download(url, props.getDirTemporaryImgs() + prefixoImgs + i + '.webp', function () {
+                        sharp(props.getDirTemporaryImgs() + prefixoImgs + i + '.webp').toFile(props.getDirDownloadImgs() + prefixoImgs + '_dsc_' + i + '.png', function (err) {
+                            //console.error(err);
+                        });
                     });
-                    imgs.push(prefixoImgs + '_dsc_' + i + '.png');
+                    imgs.push(props.getPublicUrlImgs() + prefixoImgs + '_dsc_' + i + '.png');
                 });
 
                 var json = {
                     url: this.href,
                     title: title,
                     rating: rating,
+                    downloads: downloads,
                     package: package,
-                    img: prefixoImgs + '.png',
+                    img: props.getPublicUrlImgs() + '/' + prefixoImgs + '.png',
                     description: descricao,
                     imgsDescription: imgs
                 };
+
                 res.send(json);
             } catch (exc) {
                 var statusCode = 505;
                 if (!isNaN(exc)) {
                     statusCode = exc;
                 }
-                res.status(statusCode).send("Error: " + exc);
+                res.status(statusCode).send('Error: ' + exc);
                 return;
             }
         }
@@ -89,5 +90,26 @@ var download = function (uri, filename, callback) {
         request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
     });
 };
+
+var wait = false;
+
+// Listening for directory changes and push on s3
+fs.watch(props.getDirDownloadImgs(), function (event, filename) {
+    // Necessary. Multiples call on single change.
+    if (!wait) {
+        wait = true;
+        setTimeout(function () {
+            props.cleanOldFiles();
+            child = exec('aws s3 cp ' + props.getDirDownloadImgs() + ' ' + props.getS3Bucket() + ' --recursive', function (error, stdout, stderr) {
+                console.log('stdout: ' + stdout);
+                console.log('stderr: ' + stderr);
+                if (error !== null) {
+                    console.log('exec error: ' + error);
+                }
+            });
+            wait = false;
+        }, 3000);
+    }
+});
 
 exports = module.exports = app;
