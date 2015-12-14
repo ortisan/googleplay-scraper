@@ -8,6 +8,13 @@ var exec = require('child_process').exec,
     child;
 var props = require('./props');
 
+addProtocolIfNotExists = function (url) {
+    if (!(/^(https|http)/.test(url))) {
+        url = "http:" + url;
+    }
+    return url;
+};
+
 app.get('/app', function (req, res) {
     var id = req.query.id;
 
@@ -34,6 +41,7 @@ app.get('/app', function (req, res) {
                 var imgs = [];
 
                 var urlIcone = $('img.cover-image').attr('src');
+                urlIcone = addProtocolIfNotExists(urlIcone);
                 var package = $('.details-wrapper').data('docid')
                 var prefixoImgs = package.replace(/\./gi, '_');
 
@@ -46,14 +54,14 @@ app.get('/app', function (req, res) {
 
                 $('.thumbnails img.screenshot').each(function (i, element) {
                     var url = $(element).attr('src');
-                    url = url.replace('https:', 'http:');
+                    url = addProtocolIfNotExists(url);
 
                     download(url, props.getDirTemporaryImgs() + prefixoImgs + i + '.webp', function () {
                         sharp(props.getDirTemporaryImgs() + prefixoImgs + i + '.webp').toFile(props.getDirDownloadImgs() + prefixoImgs + '_dsc_' + i + '.png', function (err) {
                             //console.error(err);
                         });
                     });
-                    imgs.push(props.getPublicUrlImgs() + prefixoImgs + '_dsc_' + i + '.png');
+                    imgs.push(props.getPublicUrlImgs() + '/' + prefixoImgs + '_dsc_' + i + '.png');
                 });
 
                 var json = {
@@ -62,7 +70,7 @@ app.get('/app', function (req, res) {
                     rating: rating,
                     downloads: downloads,
                     package: package,
-                    img: props.getPublicUrlImgs() + '/' + prefixoImgs + '.png',
+                    img: props.getPublicUrlImgs() + '/' + prefixoImgs + '_icon' + '.png',
                     description: descricao,
                     imgsDescription: imgs
                 };
