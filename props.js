@@ -4,11 +4,11 @@ moment().format();
 
 module.exports = {
     getS3Bucket: function () {
-        return 's3://imgs-teste';
+        return 's3://homolog-dm-icon.mundopositivo.com.br';
     },
 
     getPublicUrlImgs: function () {
-        return 'http://imgs-teste.s3-website-us-east-1.amazonaws.com';
+        return 'http://homolog-dm-icon.mundopositivo.com.br';
     },
 
     getDirTemporaryImgs: function () {

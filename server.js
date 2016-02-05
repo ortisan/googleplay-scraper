@@ -89,7 +89,7 @@ app.get('/app', function (req, res) {
 });
 
 
-app.listen('8081')
+app.listen('8081');
 
 console.log('Listening on port 8081');
 
@@ -108,9 +108,7 @@ fs.watch(props.getDirDownloadImgs(), function (event, filename) {
         wait = true;
         setTimeout(function () {
             props.cleanOldFiles();
-            child = exec('aws s3 cp ' + props.getDirDownloadImgs() + ' ' + props.getS3Bucket() + ' --recursive', function (error, stdout, stderr) {
-                console.log('stdout: ' + stdout);
-                console.log('stderr: ' + stderr);
+            child = exec('aws s3 cp ' + props.getDirDownloadImgs() + ' ' + props.getS3Bucket() + ' --region=us-east-1 --recursive', function (error, stdout, stderr) {
                 if (error !== null) {
                     console.log('exec error: ' + error);
                 }
