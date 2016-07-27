@@ -3,7 +3,6 @@ Scraper do google play.
 
 Obtém os dados do aplicativo especificado no parametro **id**.
 
-
 ## Utilização
 **npm install**
 
